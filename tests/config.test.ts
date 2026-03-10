@@ -32,4 +32,29 @@ describe('loadConfig', () => {
     expect(config.region).toBe('eastus');
     expect(config.apiKey).toBe('test-key-123');
   });
+
+  it('falls back to a config file in the current working directory', () => {
+    const configPath = path.join(tmpDir, 'tts.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 0.8,
+      outputDir: './output',
+      region: 'japaneast',
+      apiKey: 'cwd-key-456',
+    }));
+
+    const originalCwd = process.cwd();
+    process.chdir(tmpDir);
+
+    try {
+      const config = loadConfig();
+      expect(config.voice).toBe('ja-JP-NanamiNeural');
+      expect(config.speed).toBe(0.8);
+      expect(config.outputDir).toBe('./output');
+      expect(config.region).toBe('japaneast');
+      expect(config.apiKey).toBe('cwd-key-456');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
 });
