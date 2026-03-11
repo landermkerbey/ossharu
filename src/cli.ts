@@ -81,6 +81,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
     .option('--api-key <key>', 'Azure API key')
     .option('--batch <path>', 'path to batch JSON file')
     .option('--continue', 'continue batch processing after a failed entry')
+    .option('--force', 'overwrite existing files instead of skipping them')
     .argument('[text]', 'text to synthesize')
     .action(async (text: string | undefined, opts) => {
       const config = loadConfig({
@@ -110,6 +111,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
 	      speed: entry.speed ?? config.speed,
 	      outputDir: config.outputDir,
 	      synthesizer,
+	      force: opts.force,
 	    });
 	    onOutput(`Generated: ${outputPath}`);
 	  } catch (err) {
@@ -128,6 +130,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
           speed: config.speed,
           outputDir: config.outputDir,
           synthesizer,
+	  force: opts.force,
         });
         onOutput(`Generated: ${outputPath}`);
       } else {

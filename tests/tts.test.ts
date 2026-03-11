@@ -67,4 +67,63 @@ describe('synthesizeSpeech', () => {
     expect(files).toHaveLength(0);
   });
 
+  it('skips synthesis if an output file for the same text already exists', async () => {
+    const mockSynthesize = jest.fn().mockResolvedValue(Buffer.from('fake-audio-data'));
+
+    // First call — should synthesize and write
+    const firstPath = await synthesizeSpeech({
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(1);
+    expect(fs.existsSync(firstPath)).toBe(true);
+
+    // Second call with identical text — should skip synthesis entirely
+    const secondPath = await synthesizeSpeech({
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(1); // not called again
+    expect(secondPath).toBe(firstPath);              // same path returned
+  });
+
+  it('re-synthesizes and overwrites an existing file when force is true', async () => {
+    const mockSynthesize = jest.fn()
+      .mockResolvedValueOnce(Buffer.from('original-audio'))
+      .mockResolvedValueOnce(Buffer.from('new-audio'));
+
+    // First call — writes the file
+    const firstPath = await synthesizeSpeech({
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+    });
+
+    expect(fs.readFileSync(firstPath)).toEqual(Buffer.from('original-audio'));
+
+    // Second call with force — should re-synthesize and overwrite
+    const secondPath = await synthesizeSpeech({
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+      force: true,
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(2);
+    expect(secondPath).toBe(firstPath);
+    expect(fs.readFileSync(secondPath)).toEqual(Buffer.from('new-audio'));
+  });
+
 });
