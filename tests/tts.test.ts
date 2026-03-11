@@ -50,4 +50,21 @@ describe('synthesizeSpeech', () => {
     expect(filename).toMatch(/^こんにちは世界/);
   });
 
+  it('rejects if the synthesizer throws', async () => {
+    const mockSynthesize = jest.fn().mockRejectedValue(
+      new Error('Azure API error: invalid API key')
+    );
+
+    await expect(synthesizeSpeech({
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+    })).rejects.toThrow('Azure API error: invalid API key');
+
+    const files = fs.readdirSync(tmpDir);
+    expect(files).toHaveLength(0);
+  });
+
 });
