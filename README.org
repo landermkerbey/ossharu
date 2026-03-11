@@ -18,10 +18,13 @@ npm run build
 
 * Configuration
 
-ossharu looks for a config file in the following order:
+=ossharu= looks for a config file in the following order:
 
 1. The path passed via =--config=
-2. =ossharu.config.json= in the current working directory
+2. =ossharu.config.json= in the current working directory; if none is
+   found =ossharu= climbs the directory tree until it finds one. This
+   allows you to define one configuration for multiple directories by
+   placing it in their nearest common ancestor directory.
 3. =$XDG_CONFIG_HOME/ossharu/config.json= (defaults to =~/.config/ossharu/config.json=)
 
 All fields are required.
