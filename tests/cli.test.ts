@@ -75,4 +75,48 @@ describe('runCli', () => {
     });
   });
 
+  it('batch input synthesizes one file per entry', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const batchPath = path.join(tmpDir, 'batch.json');
+    fs.writeFileSync(batchPath, JSON.stringify([
+      { text: 'おはようございます', voice: 'ja-JP-NanamiNeural', speed: 0.75 },
+      { text: 'こんにちは' },
+      { text: 'おやすみなさい', speed: 1.25 },
+    ]));
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--batch', batchPath],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(3);
+    expect(mockSynthesize).toHaveBeenNthCalledWith(1, {
+      text: 'おはようございます',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 0.75,
+    });
+    expect(mockSynthesize).toHaveBeenNthCalledWith(2, {
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+    });
+    expect(mockSynthesize).toHaveBeenNthCalledWith(3, {
+      text: 'おやすみなさい',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.25,
+    });
+    expect(output).toHaveLength(3);
+  });
+
 });

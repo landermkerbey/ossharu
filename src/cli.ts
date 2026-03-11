@@ -9,6 +9,12 @@ export interface RunCliOptions {
   onOutput: (line: string) => void;
 }
 
+interface BatchEntry {
+  text: string;
+  voice?: string;
+  speed?: number;
+}
+
 export async function runCli(options: RunCliOptions): Promise<void> {
   const { argv, synthesizer, onOutput } = options;
 
@@ -23,6 +29,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
     .option('--output-dir <path>', 'output directory')
     .option('--region <region>', 'Azure region')
     .option('--api-key <key>', 'Azure API key')
+    .option('--batch <path>', 'path to batch JSON file')
     .argument('[text]', 'text to synthesize')
     .action(async (text: string | undefined, opts) => {
       const config = loadConfig({
@@ -40,7 +47,21 @@ export async function runCli(options: RunCliOptions): Promise<void> {
         fs.mkdirSync(config.outputDir, { recursive: true });
       }
 
-      if (text) {
+      if (opts.batch) {
+        const raw = fs.readFileSync(opts.batch, 'utf-8');
+        const entries: BatchEntry[] = JSON.parse(raw);
+
+        for (const entry of entries) {
+          const outputPath = await synthesizeSpeech({
+            text: entry.text,
+            voice: entry.voice ?? config.voice,
+            speed: entry.speed ?? config.speed,
+            outputDir: config.outputDir,
+            synthesizer,
+          });
+          onOutput(`Generated: ${outputPath}`);
+        }
+      } else if (text) {
         const outputPath = await synthesizeSpeech({
           text,
           voice: config.voice,
