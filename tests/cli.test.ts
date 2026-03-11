@@ -43,4 +43,36 @@ describe('runCli', () => {
     expect(output[0]).toMatch(/こんにちは/);
     expect(output[0]).toMatch(/\.mp3$/);
   });
+
+  it('CLI flags take precedence over config file values', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: [
+	'node', 'ossharu',
+	'--config', configPath,
+	'--voice', 'ja-JP-KeitaNeural',
+	'--speed', '0.75',
+	'おはようございます',
+      ],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledWith({
+      text: 'おはようございます',
+      voice: 'ja-JP-KeitaNeural',
+      speed: 0.75,
+    });
+  });
+
 });
