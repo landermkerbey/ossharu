@@ -115,4 +115,17 @@ describe('loadConfig', () => {
     expect(config.apiKey).toBe('file-key-123');
   });
 
+  it('throws if apiKey is missing from the config file', () => {
+    const configPath = path.join(tmpDir, 'bad-config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: './audio',
+      region: 'japaneast',
+      // apiKey intentionally omitted
+    }));
+
+    expect(() => loadConfig({ configFile: configPath })).toThrow(/apiKey/);
+  });
+
 });

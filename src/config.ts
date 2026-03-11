@@ -30,6 +30,14 @@ function readConfigFile(filePath: string): TtsConfig {
   return JSON.parse(raw) as TtsConfig;
 }
 
+function validateConfig(config: TtsConfig): void {
+  if (!config.apiKey) {
+    throw new Error(
+      'Config is invalid: apiKey is required but was not provided.'
+    );
+  }
+}
+
 export function loadConfig(options: LoadConfigOptions = {}): TtsConfig {
   let base: TtsConfig | null = null;
 
@@ -57,5 +65,7 @@ export function loadConfig(options: LoadConfigOptions = {}): TtsConfig {
     );
   }
 
-  return { ...base, ...options.overrides };
+  const merged = { ...base, ...options.overrides };
+  validateConfig(merged);
+  return merged;
 }
