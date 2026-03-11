@@ -34,7 +34,7 @@ describe('loadConfig', () => {
   });
 
   it('falls back to a config file in the current working directory', () => {
-    const configPath = path.join(tmpDir, 'tts.config.json');
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
     fs.writeFileSync(configPath, JSON.stringify({
       voice: 'ja-JP-NanamiNeural',
       speed: 0.8,
@@ -57,4 +57,62 @@ describe('loadConfig', () => {
       process.chdir(originalCwd);
     }
   });
+
+  it('falls back to a config file in the XDG config directory', () => {
+    const xdgConfigDir = path.join(tmpDir, 'xdg-config', 'ossharu');
+    fs.mkdirSync(xdgConfigDir, { recursive: true });
+
+    const configPath = path.join(xdgConfigDir, 'config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'fr-FR-DeniseNeural',
+      speed: 1.2,
+      outputDir: './french',
+      region: 'francecentral',
+      apiKey: 'xdg-key-789',
+    }));
+
+    const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
+    process.env.XDG_CONFIG_HOME = path.join(tmpDir, 'xdg-config');
+
+    try {
+      const config = loadConfig();
+      expect(config.voice).toBe('fr-FR-DeniseNeural');
+      expect(config.speed).toBe(1.2);
+      expect(config.outputDir).toBe('./french');
+      expect(config.region).toBe('francecentral');
+      expect(config.apiKey).toBe('xdg-key-789');
+    } finally {
+      if (originalXdgConfigHome === undefined) {
+	delete process.env.XDG_CONFIG_HOME;
+      } else {
+	process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
+      }
+    }
+  });
+
+  it('CLI flags take precedence over config file values', () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'en-US-JennyNeural',
+      speed: 1.0,
+      outputDir: './audio',
+      region: 'eastus',
+      apiKey: 'file-key-123',
+    }));
+
+    const config = loadConfig({
+      configFile: configPath,
+      overrides: {
+	voice: 'ja-JP-NanamiNeural',
+	speed: 0.75,
+      },
+    });
+
+    expect(config.voice).toBe('ja-JP-NanamiNeural');
+    expect(config.speed).toBe(0.75);
+    expect(config.outputDir).toBe('./audio');
+    expect(config.region).toBe('eastus');
+    expect(config.apiKey).toBe('file-key-123');
+  });
+
 });
