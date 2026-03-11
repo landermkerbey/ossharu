@@ -159,4 +159,75 @@ describe('runCli', () => {
     expect(output[3]).toMatch(/Exiting/);
   });
 
+  it('aborts batch processing on the first synthesizer failure', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const batchPath = path.join(tmpDir, 'batch.json');
+    fs.writeFileSync(batchPath, JSON.stringify([
+      { text: 'おはようございます' },
+      { text: 'こんにちは' },       // this one will fail
+      { text: 'おやすみなさい' },
+    ]));
+
+    const mockSynthesize = jest.fn()
+      .mockResolvedValueOnce(Buffer.from('audio-1'))
+      .mockRejectedValueOnce(new Error('Azure timeout'))
+      .mockResolvedValueOnce(Buffer.from('audio-3'));
+
+    const output: string[] = [];
+
+    await expect(runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--batch', batchPath],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+    })).rejects.toThrow('Azure timeout');
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(2);  // third entry never reached
+    expect(output).toHaveLength(1);                   // only first entry reported
+  });
+
+  it('continues batch processing after a failure when --continue is passed', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const batchPath = path.join(tmpDir, 'batch.json');
+    fs.writeFileSync(batchPath, JSON.stringify([
+      { text: 'おはようございます' },
+      { text: 'こんにちは' },         // this one will fail
+      { text: 'おやすみなさい' },
+    ]));
+
+    const mockSynthesize = jest.fn()
+      .mockResolvedValueOnce(Buffer.from('audio-1'))
+      .mockRejectedValueOnce(new Error('Azure timeout'))
+      .mockResolvedValueOnce(Buffer.from('audio-3'));
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--batch', batchPath, '--continue'],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(3);
+    expect(output).toHaveLength(3);
+    expect(output[0]).toMatch(/おはようございます/);
+    expect(output[1]).toMatch(/FAILED: こんにちは.*Azure timeout/);
+    expect(output[2]).toMatch(/おやすみなさい/);
+  });
+
 });

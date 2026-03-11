@@ -80,6 +80,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
     .option('--region <region>', 'Azure region')
     .option('--api-key <key>', 'Azure API key')
     .option('--batch <path>', 'path to batch JSON file')
+    .option('--continue', 'continue batch processing after a failed entry')
     .argument('[text]', 'text to synthesize')
     .action(async (text: string | undefined, opts) => {
       const config = loadConfig({
@@ -101,16 +102,25 @@ export async function runCli(options: RunCliOptions): Promise<void> {
         const raw = fs.readFileSync(opts.batch, 'utf-8');
         const entries: BatchEntry[] = JSON.parse(raw);
 
-        for (const entry of entries) {
-          const outputPath = await synthesizeSpeech({
-            text: entry.text,
-            voice: entry.voice ?? config.voice,
-            speed: entry.speed ?? config.speed,
-            outputDir: config.outputDir,
-            synthesizer,
-          });
-          onOutput(`Generated: ${outputPath}`);
-        }
+	for (const entry of entries) {
+	  try {
+	    const outputPath = await synthesizeSpeech({
+	      text: entry.text,
+	      voice: entry.voice ?? config.voice,
+	      speed: entry.speed ?? config.speed,
+	      outputDir: config.outputDir,
+	      synthesizer,
+	    });
+	    onOutput(`Generated: ${outputPath}`);
+	  } catch (err) {
+	    if (opts.continue) {
+	      onOutput(`FAILED: ${entry.text} — ${(err as Error).message}`);
+	    } else {
+	      throw err;
+	    }
+	  }
+	}
+
       } else if (text) {
         const outputPath = await synthesizeSpeech({
           text,
