@@ -290,4 +290,75 @@ describe('runCli', () => {
     });
   });
 
+  it('emits JSON objects for each batch entry when --json is passed', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const batchPath = path.join(tmpDir, 'batch.json');
+    fs.writeFileSync(batchPath, JSON.stringify([
+      { text: 'おはようございます' },
+      { text: 'こんにちは' },
+      { text: 'おやすみなさい' },
+    ]));
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--batch', batchPath, '--json'],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(output).toHaveLength(3);
+
+    const parsed = output.map(line => JSON.parse(line));
+    expect(parsed[0]).toEqual({ status: 'ok', text: 'おはようございます', path: expect.stringMatching(/おはようございます.*\.mp3$/) });
+    expect(parsed[1]).toEqual({ status: 'ok', text: 'こんにちは', path: expect.stringMatching(/こんにちは.*\.mp3$/) });
+    expect(parsed[2]).toEqual({ status: 'ok', text: 'おやすみなさい', path: expect.stringMatching(/おやすみなさい.*\.mp3$/) });
+  });
+
+  it('emits JSON failure objects for failed batch entries when --json is passed', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const batchPath = path.join(tmpDir, 'batch.json');
+    fs.writeFileSync(batchPath, JSON.stringify([
+      { text: 'おはようございます' },
+      { text: 'こんにちは' },
+      { text: 'おやすみなさい' },
+    ]));
+
+    const failingSynthesize = jest.fn()
+      .mockResolvedValueOnce(Buffer.from('audio-1'))
+      .mockRejectedValueOnce(new Error('Azure timeout'))
+      .mockResolvedValueOnce(Buffer.from('audio-3'));
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--batch', batchPath, '--json'],
+      synthesizer: failingSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(output).toHaveLength(3);
+
+    const parsed = output.map(line => JSON.parse(line));
+    expect(parsed[0]).toEqual({ status: 'ok', text: 'おはようございます', path: expect.stringMatching(/おはようございます.*\.mp3$/) });
+    expect(parsed[1]).toEqual({ status: 'failed', text: 'こんにちは', error: 'Azure timeout' });
+    expect(parsed[2]).toEqual({ status: 'ok', text: 'おやすみなさい', path: expect.stringMatching(/おやすみなさい.*\.mp3$/) });
+  });
+
 });

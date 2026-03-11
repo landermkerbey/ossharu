@@ -114,16 +114,21 @@ export async function runCli(options: RunCliOptions): Promise<void> {
 	      synthesizer,
 	      force: opts.force,
 	    });
-	    onOutput(`Generated: ${outputPath}`);
+	    if (opts.json) {
+	      onOutput(JSON.stringify({ status: 'ok', text: entry.text, path: outputPath }));
+	    } else {
+	      onOutput(`Generated: ${outputPath}`);
+	    }
 	  } catch (err) {
-	    if (opts.continue) {
+	    if (opts.json) {
+	      onOutput(JSON.stringify({ status: 'failed', text: entry.text, error: (err as Error).message }));
+	    } else if (opts.continue) {
 	      onOutput(`FAILED: ${entry.text} — ${(err as Error).message}`);
 	    } else {
 	      throw err;
 	    }
 	  }
 	}
-
       } else if (text) {
         try {
           const outputPath = await synthesizeSpeech({
