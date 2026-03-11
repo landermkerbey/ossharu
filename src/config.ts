@@ -40,16 +40,38 @@ function validateConfig(config: TtsConfig): void {
   }
 }
 
+function findConfigInAncestors(dir: string): string | null {
+  const home = os.homedir();
+  let current = dir;
+
+  while (true) {
+    const candidate = path.join(current, LOCAL_CONFIG_FILENAME);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    if (current === home) {
+      return null;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      // reached filesystem root without finding home
+      return null;
+    }
+    current = parent;
+  }
+}
+
 export function loadConfig(options: LoadConfigOptions = {}): TtsConfig {
   let base: TtsConfig | null = null;
 
   if (options.configFile) {
     base = readConfigFile(options.configFile);
   } else {
-    const cwdConfig = path.join(process.cwd(), LOCAL_CONFIG_FILENAME);
-    if (fs.existsSync(cwdConfig)) {
+    const cwdConfig = findConfigInAncestors(process.cwd());
+    if (cwdConfig) {
       base = readConfigFile(cwdConfig);
-    } else {
+    }
+    else {
       const xdgConfig = path.join(getXdgConfigDir(), XDG_CONFIG_FILENAME);
       if (fs.existsSync(xdgConfig)) {
         base = readConfigFile(xdgConfig);

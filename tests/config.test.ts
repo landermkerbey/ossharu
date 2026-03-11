@@ -167,4 +167,28 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ configFile: configPath })).toThrow(/outputDir/);
   });
 
+  it('walks up the directory tree to find a config file in a parent directory', () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: './audio',
+      region: 'japaneast',
+      apiKey: 'parent-key',
+    }));
+
+    const childDir = path.join(tmpDir, 'text');
+    fs.mkdirSync(childDir);
+
+    const originalCwd = process.cwd();
+    process.chdir(childDir);
+
+    try {
+      const config = loadConfig();
+      expect(config.apiKey).toBe('parent-key');
+    } finally {
+      process.chdir(originalCwd);
+    }
+  });
+
 });
