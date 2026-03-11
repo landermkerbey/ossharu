@@ -92,17 +92,18 @@ ossharu --config ossharu.config.json --force "こんにちは"
 
 ** Flag reference
 
-| Flag         | Description                                       |
-|--------------+---------------------------------------------------|
-| =--config=     | Path to config file                               |
-| =--voice=      | Override voice name                               |
-| =--speed=      | Override speech speed                             |
-| =--output-dir= | Override output directory                         |
-| =--region=     | Override Azure region                             |
-| =--api-key=    | Override Azure API key                            |
-| =--batch=      | Path to batch JSON file                           |
-| =--continue=   | Continue batch processing after a failed entry    |
-| =--force=      | Overwrite existing files instead of skipping them |
+| Flag         | Description                                                                          |
+|--------------+--------------------------------------------------------------------------------------|
+| =--config=     | Path to config file                                                                  |
+| =--voice=      | Override voice name                                                                  |
+| =--speed=      | Override speech speed                                                                |
+| =--output-dir= | Override output directory                                                            |
+| =--region=     | Override Azure region                                                                |
+| =--api-key=    | Override Azure API key                                                               |
+| =--batch=      | Path to batch JSON file                                                              |
+| =--continue=   | Continue batch processing after a failed entry                                       |
+| =--force=      | Overwrite existing files instead of skipping them                                    |
+| --json       | Emit output report as JSON; intended for programmatic consumption of output metadata |
 
 CLI flags take precedence over config file values.
 
