@@ -17,13 +17,16 @@ export interface SpeechOptions {
   synthesizer: SynthesizerFn;
 }
 
+const MAX_TEXT_IN_FILENAME = 30;
+
 export async function synthesizeSpeech(options: SpeechOptions): Promise<string> {
   const { text, voice, speed, outputDir, synthesizer } = options;
 
   const audioData = await synthesizer({ text, voice, speed });
 
+  const slug = text.slice(0, MAX_TEXT_IN_FILENAME).replace(/[/\\?%*:|"<>]/g, '-');
   const timestamp = Date.now();
-  const filename = `${timestamp}.mp3`;
+  const filename = `${slug}-${timestamp}.mp3`;
   const outputPath = path.join(outputDir, filename);
 
   fs.writeFileSync(outputPath, audioData);

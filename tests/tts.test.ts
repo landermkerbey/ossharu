@@ -34,4 +34,20 @@ describe('synthesizeSpeech', () => {
     expect(fs.readFileSync(outputPath)).toEqual(Buffer.from('fake-audio-data'));
     expect(outputPath).toMatch(/\.mp3$/);
   });
+
+  it('generates a filename derived from the source text', async () => {
+    const mockSynthesize = jest.fn().mockResolvedValue(Buffer.from('fake-audio-data'));
+
+    const outputPath = await synthesizeSpeech({
+      text: 'こんにちは世界',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+    });
+
+    const filename = path.basename(outputPath, '.mp3');
+    expect(filename).toMatch(/^こんにちは世界/);
+  });
+
 });
