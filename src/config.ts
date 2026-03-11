@@ -16,6 +16,7 @@ export interface TtsConfig {
 
 export interface LoadConfigOptions {
   configFile?: string;
+  overrides?: Partial<TtsConfig>;
 }
 
 function getXdgConfigDir(): string {
@@ -24,27 +25,37 @@ function getXdgConfigDir(): string {
   return path.join(xdgConfigHome, APP_NAME);
 }
 
+function readConfigFile(filePath: string): TtsConfig {
+  const raw = fs.readFileSync(filePath, 'utf-8');
+  return JSON.parse(raw) as TtsConfig;
+}
+
 export function loadConfig(options: LoadConfigOptions = {}): TtsConfig {
+  let base: TtsConfig | null = null;
+
   if (options.configFile) {
-    const raw = fs.readFileSync(options.configFile, 'utf-8');
-    return JSON.parse(raw) as TtsConfig;
+    base = readConfigFile(options.configFile);
+  } else {
+    const cwdConfig = path.join(process.cwd(), LOCAL_CONFIG_FILENAME);
+    if (fs.existsSync(cwdConfig)) {
+      base = readConfigFile(cwdConfig);
+    } else {
+      const xdgConfig = path.join(getXdgConfigDir(), XDG_CONFIG_FILENAME);
+      if (fs.existsSync(xdgConfig)) {
+        base = readConfigFile(xdgConfig);
+      }
+    }
   }
 
-  const cwdConfig = path.join(process.cwd(), LOCAL_CONFIG_FILENAME);
-  if (fs.existsSync(cwdConfig)) {
-    const raw = fs.readFileSync(cwdConfig, 'utf-8');
-    return JSON.parse(raw) as TtsConfig;
+  if (!base) {
+    const cwdConfig = path.join(process.cwd(), LOCAL_CONFIG_FILENAME);
+    const xdgConfig = path.join(getXdgConfigDir(), XDG_CONFIG_FILENAME);
+    throw new Error(
+      `No config found. Provide --config, or place a config file at:\n` +
+      `  ${cwdConfig}\n` +
+      `  ${xdgConfig}`
+    );
   }
 
-  const xdgConfig = path.join(getXdgConfigDir(), XDG_CONFIG_FILENAME);
-  if (fs.existsSync(xdgConfig)) {
-    const raw = fs.readFileSync(xdgConfig, 'utf-8');
-    return JSON.parse(raw) as TtsConfig;
-  }
-
-  throw new Error(
-    `No config found. Provide --config, or place a config file at:\n` +
-    `  ${cwdConfig}\n` +
-    `  ${xdgConfig}`
-  );
+  return { ...base, ...options.overrides };
 }
