@@ -230,4 +230,64 @@ describe('runCli', () => {
     expect(output[2]).toMatch(/おやすみなさい/);
   });
 
+  it('emits a JSON success object when --json is passed', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--json', 'こんにちは'],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(output).toHaveLength(1);
+
+    const parsed = JSON.parse(output[0]);
+    expect(parsed).toEqual({
+      status: 'ok',
+      text: 'こんにちは',
+      path: expect.stringMatching(/こんにちは.*\.mp3$/),
+    });
+  });
+
+  it('emits a JSON failure object when --json is passed and synthesis fails', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const failingSynthesize = jest.fn().mockRejectedValue(
+      new Error('Azure timeout')
+    );
+
+    const output: string[] = [];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--json', 'こんにちは'],
+      synthesizer: failingSynthesize,
+      onOutput: (line) => output.push(line),
+    });
+
+    expect(output).toHaveLength(1);
+
+    const parsed = JSON.parse(output[0]);
+    expect(parsed).toEqual({
+      status: 'failed',
+      text: 'こんにちは',
+      error: 'Azure timeout',
+    });
+  });
+
 });

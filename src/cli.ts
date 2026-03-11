@@ -82,6 +82,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
     .option('--batch <path>', 'path to batch JSON file')
     .option('--continue', 'continue batch processing after a failed entry')
     .option('--force', 'overwrite existing files instead of skipping them')
+    .option('--json', 'emit machine-readable JSON objects instead of human-readable lines')
     .argument('[text]', 'text to synthesize')
     .action(async (text: string | undefined, opts) => {
       const config = loadConfig({
@@ -124,15 +125,27 @@ export async function runCli(options: RunCliOptions): Promise<void> {
 	}
 
       } else if (text) {
-        const outputPath = await synthesizeSpeech({
-          text,
-          voice: config.voice,
-          speed: config.speed,
-          outputDir: config.outputDir,
-          synthesizer,
-	  force: opts.force,
-        });
-        onOutput(`Generated: ${outputPath}`);
+        try {
+          const outputPath = await synthesizeSpeech({
+            text,
+            voice: config.voice,
+            speed: config.speed,
+            outputDir: config.outputDir,
+            synthesizer,
+            force: opts.force,
+          });
+          if (opts.json) {
+            onOutput(JSON.stringify({ status: 'ok', text, path: outputPath }));
+          } else {
+            onOutput(`Generated: ${outputPath}`);
+          }
+        } catch (err) {
+          if (opts.json) {
+            onOutput(JSON.stringify({ status: 'failed', text, error: (err as Error).message }));
+          } else {
+            throw err;
+          }
+        }
       } else {
         await runInteractive(config, synthesizer, onOutput, onPrompt);
       }
