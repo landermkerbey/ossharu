@@ -1,0 +1,136 @@
+#+title: ossharu
+#+author: landermkerbey
+
+Lightweight TypeScript CLI wrapper for Azure Text-to-Speech. Designed for
+generating language-study audio segments from the command line.
+
+* Requirements
+
+- Node.js 18+
+- An Azure Cognitive Services subscription with Speech enabled
+
+* Installation
+
+#+begin_src sh
+npm install
+npm run build
+#+end_src
+
+* Configuration
+
+ossharu looks for a config file in the following order:
+
+1. The path passed via =--config=
+2. =ossharu.config.json= in the current working directory
+3. =$XDG_CONFIG_HOME/ossharu/config.json= (defaults to =~/.config/ossharu/config.json=)
+
+All fields are required.
+
+#+begin_src json
+{
+  "voice": "ja-JP-NanamiNeural",
+  "speed": 1.0,
+  "outputDir": "./audio",
+  "region": "japaneast",
+  "apiKey": "your-azure-api-key"
+}
+#+end_src
+
+* Usage
+
+** Single utterance
+
+#+begin_src sh
+ossharu --config ossharu.config.json "こんにちは"
+#+end_src
+
+** Interactive mode
+
+Omit the text argument to enter an interactive prompt. Press Enter on an empty
+line to exit.
+
+#+begin_src sh
+ossharu --config ossharu.config.json
+#+end_src
+
+** Batch mode
+
+Pass a JSON file containing an array of entries. Each entry may override
+=voice= and =speed= from the config.
+
+#+begin_src json
+[
+  { "text": "おはようございます", "voice": "ja-JP-NanamiNeural", "speed": 0.75 },
+  { "text": "こんにちは" },
+  { "text": "おやすみなさい", "speed": 1.25 }
+]
+#+end_src
+
+#+begin_src sh
+ossharu --config ossharu.config.json --batch entries.json
+#+end_src
+
+By default, batch mode aborts on the first failure. Pass =--continue= to skip
+failed entries and process the rest, reporting each failure inline.
+
+#+begin_src sh
+ossharu --config ossharu.config.json --batch entries.json --continue
+#+end_src
+
+** Duplicate detection
+
+If an output file for the same text already exists in =outputDir=, synthesis is
+skipped and the existing file path is returned. Pass =--force= to re-synthesize
+and overwrite.
+
+#+begin_src sh
+ossharu --config ossharu.config.json --force "こんにちは"
+#+end_src
+
+** Flag reference
+
+| Flag         | Description                                       |
+|--------------+---------------------------------------------------|
+| =--config=     | Path to config file                               |
+| =--voice=      | Override voice name                               |
+| =--speed=      | Override speech speed                             |
+| =--output-dir= | Override output directory                         |
+| =--region=     | Override Azure region                             |
+| =--api-key=    | Override Azure API key                            |
+| =--batch=      | Path to batch JSON file                           |
+| =--continue=   | Continue batch processing after a failed entry    |
+| =--force=      | Overwrite existing files instead of skipping them |
+
+CLI flags take precedence over config file values.
+
+* Output files
+
+Each synthesized utterance is saved as an MP3 to =outputDir=, with a filename
+derived from the source text and a timestamp:
+
+#+begin_example
+./audio/こんにちは-1741234567890.mp3
+#+end_example
+
+* Testing
+
+** Unit tests
+
+#+begin_src sh
+npx jest
+#+end_src
+
+** Integration tests
+
+Requires a valid Azure subscription. Set =OSSHARU_INTEGRATION=1= to opt in.
+
+#+begin_src sh
+OSSHARU_INTEGRATION=1 AZURE_REGION=japaneast AZURE_API_KEY=your-key npx jest
+#+end_src
+
+To run integration tests only:
+
+#+begin_src sh
+OSSHARU_INTEGRATION=1 AZURE_REGION=japaneast AZURE_API_KEY=your-key \
+  npx jest --testPathPattern=integration
+#+end_src
