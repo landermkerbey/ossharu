@@ -119,4 +119,44 @@ describe('runCli', () => {
     expect(output).toHaveLength(3);
   });
 
+  it('enters interactive mode when no text argument or batch file is provided', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    const output: string[] = [];
+    const inputLines = ['こんにちは', 'さようなら', ''];
+
+    await runCli({
+      argv: ['node', 'ossharu', '--config', configPath],
+      synthesizer: mockSynthesize,
+      onOutput: (line) => output.push(line),
+      onPrompt: (question, callback) => {
+	callback(inputLines.shift() ?? '');
+      },
+    });
+
+    expect(mockSynthesize).toHaveBeenCalledTimes(2);
+    expect(mockSynthesize).toHaveBeenNthCalledWith(1, {
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+    });
+    expect(mockSynthesize).toHaveBeenNthCalledWith(2, {
+      text: 'さようなら',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+    });
+    expect(output).toHaveLength(4);
+    expect(output[0]).toMatch(/interactive mode/);
+    expect(output[1]).toMatch(/\.mp3$/);
+    expect(output[2]).toMatch(/\.mp3$/);
+    expect(output[3]).toMatch(/Exiting/);
+  });
+
 });

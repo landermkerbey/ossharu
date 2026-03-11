@@ -2,11 +2,13 @@ import { Command } from 'commander';
 import { loadConfig } from './config';
 import { synthesizeSpeech, SynthesizerFn } from './tts';
 import * as fs from 'fs';
+import * as readline from 'readline';
 
 export interface RunCliOptions {
   argv: string[];
   synthesizer: SynthesizerFn;
   onOutput: (line: string) => void;
+  onPrompt?: (question: string, callback: (answer: string) => void) => void;
 }
 
 interface BatchEntry {
@@ -15,8 +17,56 @@ interface BatchEntry {
   speed?: number;
 }
 
+function defaultPrompt(
+  question: string,
+  callback: (answer: string) => void
+): void {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  rl.question(question, (answer) => {
+    rl.close();
+    callback(answer);
+  });
+}
+
+function promptAsync(
+  onPrompt: (question: string, callback: (answer: string) => void) => void,
+  question: string
+): Promise<string> {
+  return new Promise((resolve) => onPrompt(question, resolve));
+}
+
+async function runInteractive(
+  config: ReturnType<typeof loadConfig>,
+  synthesizer: SynthesizerFn,
+  onOutput: (line: string) => void,
+  onPrompt: (question: string, callback: (answer: string) => void) => void,
+): Promise<void> {
+  onOutput('Entering interactive mode. Press Enter on an empty line to exit.');
+
+  while (true) {
+    const text = await promptAsync(onPrompt, '> ');
+
+    if (text.trim() === '') {
+      onOutput('Exiting interactive mode.');
+      break;
+    }
+
+    const outputPath = await synthesizeSpeech({
+      text: text.trim(),
+      voice: config.voice,
+      speed: config.speed,
+      outputDir: config.outputDir,
+      synthesizer,
+    });
+    onOutput(`Generated: ${outputPath}`);
+  }
+}
+
 export async function runCli(options: RunCliOptions): Promise<void> {
-  const { argv, synthesizer, onOutput } = options;
+  const { argv, synthesizer, onOutput, onPrompt = defaultPrompt } = options;
 
   const program = new Command();
 
@@ -70,6 +120,8 @@ export async function runCli(options: RunCliOptions): Promise<void> {
           synthesizer,
         });
         onOutput(`Generated: ${outputPath}`);
+      } else {
+        await runInteractive(config, synthesizer, onOutput, onPrompt);
       }
     });
 
