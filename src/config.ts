@@ -30,11 +30,13 @@ function readConfigFile(filePath: string): TtsConfig {
   return JSON.parse(raw) as TtsConfig;
 }
 
+const REQUIRED_FIELDS: (keyof TtsConfig)[] = ['apiKey', 'region', 'voice', 'outputDir'];
+
 function validateConfig(config: TtsConfig): void {
-  if (!config.apiKey) {
-    throw new Error(
-      'Config is invalid: apiKey is required but was not provided.'
-    );
+  for (const field of REQUIRED_FIELDS) {
+    if (!config[field]) {
+      throw new Error(`Config is invalid: ${field} is required but was not provided.`);
+    }
   }
 }
 

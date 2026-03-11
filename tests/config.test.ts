@@ -128,4 +128,43 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ configFile: configPath })).toThrow(/apiKey/);
   });
 
+  it('throws if region is missing from the config file', () => {
+    const configPath = path.join(tmpDir, 'bad-config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: './audio',
+      apiKey: 'test-key',
+      // region intentionally omitted
+    }));
+
+    expect(() => loadConfig({ configFile: configPath })).toThrow(/region/);
+  });
+
+  it('throws if voice is missing from the config file', () => {
+    const configPath = path.join(tmpDir, 'bad-config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      speed: 1.0,
+      outputDir: './audio',
+      region: 'japaneast',
+      apiKey: 'test-key',
+      // voice intentionally omitted
+    }));
+
+    expect(() => loadConfig({ configFile: configPath })).toThrow(/voice/);
+  });
+
+  it('throws if outputDir is missing from the config file', () => {
+    const configPath = path.join(tmpDir, 'bad-config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      region: 'japaneast',
+      apiKey: 'test-key',
+      // outputDir intentionally omitted
+    }));
+
+    expect(() => loadConfig({ configFile: configPath })).toThrow(/outputDir/);
+  });
+
 });
