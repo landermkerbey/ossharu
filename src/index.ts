@@ -13,7 +13,10 @@ async function main(): Promise<void> {
 
   const flagOverrides = parseEarlyFlags(process.argv);
 
-  const config = loadConfig({ configFile, overrides: flagOverrides });
+  const config = loadConfig({
+    ...(configFile !== undefined ? { configFile } : {}),
+    overrides: flagOverrides,
+  });
   const synthesizer = createAzureSynthesizer(config.region, config.apiKey);
 
   await runCli({
@@ -30,13 +33,15 @@ function parseEarlyFlags(argv: string[]): Partial<{
   const overrides: Partial<{ region: string; apiKey: string }> = {};
 
   const regionIndex = argv.indexOf('--region');
-  if (regionIndex !== -1 && argv[regionIndex + 1]) {
-    overrides.region = argv[regionIndex + 1];
+  const regionValue = argv[regionIndex + 1];
+  if (regionIndex !== -1 && regionValue) {
+    overrides.region = regionValue;
   }
 
   const apiKeyIndex = argv.indexOf('--api-key');
-  if (apiKeyIndex !== -1 && argv[apiKeyIndex + 1]) {
-    overrides.apiKey = argv[apiKeyIndex + 1];
+  const apiKeyValue = argv[apiKeyIndex + 1];
+  if (apiKeyIndex !== -1 && apiKeyValue) {
+    overrides.apiKey = apiKeyValue;
   }
 
   return overrides;

@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "CLI for generating language-study audio via Azure TTS",
   "main": "dist/index.js",
-  "bin": { "tts": "dist/index.js" },
+  "bin": { "ossharu": "dist/index.js" },
   "scripts": {
     "build": "tsc",
     "test": "jest",
