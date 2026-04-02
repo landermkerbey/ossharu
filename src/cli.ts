@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { loadConfig } from './config';
 import { synthesizeSpeech, SynthesizerFn } from './tts';
 import * as fs from 'fs';
@@ -70,10 +70,18 @@ export async function runCli(options: RunCliOptions): Promise<void> {
 
   const program = new Command();
 
+  // Throw CommanderError instead of calling process.exit(), so callers (tests
+  // and index.ts) can handle errors programmatically.
+  program.exitOverride();
+
   program
     .name('ossharu')
     .description('Generate language-study audio segments via Azure TTS')
     .option('--config <path>', 'path to config file')
+    .addOption(
+      new Option('--profile <name>', 'named profile from XDG config (mutually exclusive with --config)')
+        .conflicts('config'),
+    )
     .option('--voice <voice>', 'voice name')
     .option('--speed <number>', 'speech speed', parseFloat)
     .option('--output-dir <path>', 'output directory')
@@ -87,6 +95,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
     .action(async (text: string | undefined, opts) => {
       const config = loadConfig({
         configFile: opts.config,
+        profile: opts.profile,
         overrides: {
           ...(opts.voice && { voice: opts.voice }),
           ...(opts.speed && { speed: opts.speed }),

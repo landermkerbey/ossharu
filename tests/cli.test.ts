@@ -323,6 +323,72 @@ describe('runCli', () => {
     expect(parsed[2]).toEqual({ status: 'ok', text: 'おやすみなさい', path: expect.stringMatching(/おやすみなさい.*\.mp3$/) });
   });
 
+  // ---------------------------------------------------------------------------
+  // --profile flag
+  // ---------------------------------------------------------------------------
+
+  it('--profile selects a named profile from the XDG config', async () => {
+    const xdgConfigDir = path.join(tmpDir, 'xdg-config', 'ossharu');
+    fs.mkdirSync(xdgConfigDir, { recursive: true });
+    fs.writeFileSync(path.join(xdgConfigDir, 'config.json'), JSON.stringify({
+      profiles: {
+        japanese: {
+          voice: 'ja-JP-NanamiNeural',
+          speed: 1.0,
+          outputDir: tmpDir,
+          region: 'japaneast',
+          apiKey: 'profile-key',
+        },
+      },
+    }));
+
+    const originalXdgConfigHome = process.env.XDG_CONFIG_HOME;
+    process.env.XDG_CONFIG_HOME = path.join(tmpDir, 'xdg-config');
+
+    const output: string[] = [];
+
+    try {
+      await runCli({
+        argv: ['node', 'ossharu', '--profile', 'japanese', 'こんにちは'],
+        synthesizer: mockSynthesize,
+        onOutput: (line) => output.push(line),
+      });
+    } finally {
+      if (originalXdgConfigHome === undefined) {
+        delete process.env.XDG_CONFIG_HOME;
+      } else {
+        process.env.XDG_CONFIG_HOME = originalXdgConfigHome;
+      }
+    }
+
+    expect(mockSynthesize).toHaveBeenCalledWith({
+      text: 'こんにちは',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+    });
+    expect(output[0]).toMatch(/こんにちは/);
+    expect(output[0]).toMatch(/\.mp3$/);
+  });
+
+  it('--profile and --config are mutually exclusive', async () => {
+    const configPath = path.join(tmpDir, 'ossharu.config.json');
+    fs.writeFileSync(configPath, JSON.stringify({
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      region: 'japaneast',
+      apiKey: 'test-key',
+    }));
+
+    await expect(runCli({
+      argv: ['node', 'ossharu', '--config', configPath, '--profile', 'japanese', 'こんにちは'],
+      synthesizer: mockSynthesize,
+      onOutput: () => {},
+    })).rejects.toThrow();
+
+    expect(mockSynthesize).not.toHaveBeenCalled();
+  });
+
   it('emits JSON failure objects for failed batch entries when --json is passed', async () => {
     const configPath = path.join(tmpDir, 'ossharu.config.json');
     fs.writeFileSync(configPath, JSON.stringify({

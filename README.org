@@ -21,11 +21,16 @@ npm run build
 =ossharu= looks for a config file in the following order:
 
 1. The path passed via =--config=
-2. =ossharu.config.json= in the current working directory; if none is
-   found =ossharu= climbs the directory tree until it finds one. This
-   allows you to define one configuration for multiple directories by
-   placing it in their nearest common ancestor directory.
-3. =$XDG_CONFIG_HOME/ossharu/config.json= (defaults to =~/.config/ossharu/config.json=)
+2. A named profile selected via =--profile= (reads from the XDG config file; mutually exclusive with =--config=)
+3. =ossharu.config.json= in the current working directory; if none is found,
+   =ossharu= climbs the directory tree until it finds one. This allows you to
+   define one configuration for multiple directories by placing it in their
+   nearest common ancestor directory.
+4. =$XDG_CONFIG_HOME/ossharu/config.json= (defaults to =~/.config/ossharu/config.json=)
+
+CLI flags (=--voice=, =--speed=, etc.) take precedence over any config source.
+
+** Single-profile config
 
 All fields are required.
 
@@ -39,12 +44,56 @@ All fields are required.
 }
 #+end_src
 
+This format is valid in any of the locations above. The XDG config file also
+supports this legacy format for backward compatibility.
+
+** Multi-profile config (XDG only)
+
+The XDG config file supports multiple named profiles. Each profile is a
+complete config object. The =defaultProfile= field controls which profile is
+used when =--profile= is not specified.
+
+#+begin_src json
+{
+  "defaultProfile": "japanese",
+  "profiles": {
+    "japanese": {
+      "voice": "ja-JP-NanamiNeural",
+      "speed": 1.0,
+      "outputDir": "~/japanese-audio",
+      "region": "japaneast",
+      "apiKey": "your-azure-api-key"
+    },
+    "french": {
+      "voice": "fr-FR-DeniseNeural",
+      "speed": 1.2,
+      "outputDir": "~/french-audio",
+      "region": "francecentral",
+      "apiKey": "your-azure-api-key"
+    }
+  }
+}
+#+end_src
+
+Profile selection rules when =--profile= is not passed:
+
+- If =defaultProfile= is set, that profile is used.
+- If no =defaultProfile= is set and only one profile exists, it is used automatically.
+- If no =defaultProfile= is set and multiple profiles exist, =ossharu= exits with
+  an error listing the available profile names.
+
 * Usage
 
 ** Single utterance
 
 #+begin_src sh
 ossharu --config ossharu.config.json "こんにちは"
+#+end_src
+
+Select a profile from the XDG config:
+
+#+begin_src sh
+ossharu --profile french "bonjour"
 #+end_src
 
 ** Interactive mode
@@ -92,20 +141,19 @@ ossharu --config ossharu.config.json --force "こんにちは"
 
 ** Flag reference
 
-| Flag         | Description                                                                          |
-|--------------+--------------------------------------------------------------------------------------|
-| =--config=     | Path to config file                                                                  |
-| =--voice=      | Override voice name                                                                  |
-| =--speed=      | Override speech speed                                                                |
-| =--output-dir= | Override output directory                                                            |
-| =--region=     | Override Azure region                                                                |
-| =--api-key=    | Override Azure API key                                                               |
-| =--batch=      | Path to batch JSON file                                                              |
-| =--continue=   | Continue batch processing after a failed entry                                       |
-| =--force=      | Overwrite existing files instead of skipping them                                    |
-| --json       | Emit output report as JSON; intended for programmatic consumption of output metadata |
-
-CLI flags take precedence over config file values.
+| Flag           | Description                                                                          |
+|----------------+--------------------------------------------------------------------------------------|
+| =--config=       | Path to a config file (mutually exclusive with =--profile=)                          |
+| =--profile=      | Named profile from the XDG config file (mutually exclusive with =--config=)          |
+| =--voice=        | Override voice name                                                                  |
+| =--speed=        | Override speech speed                                                                |
+| =--output-dir=   | Override output directory                                                            |
+| =--region=       | Override Azure region                                                                |
+| =--api-key=      | Override Azure API key                                                               |
+| =--batch=        | Path to batch JSON file                                                              |
+| =--continue=     | Continue batch processing after a failed entry                                       |
+| =--force=        | Overwrite existing files instead of skipping them                                    |
+| =--json=         | Emit output report as JSON; intended for programmatic consumption of output metadata |
 
 * Output files
 
