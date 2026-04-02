@@ -100,7 +100,7 @@ function resolveFromXdgConfig(
         `Available profiles: ${profileNames.join(', ')}`,
       );
     }
-    return parsed.profiles[profileName];
+    return parsed.profiles[profileName]!;
   }
 
   // No --profile given; figure out which profile to use automatically.
@@ -114,11 +114,11 @@ function resolveFromXdgConfig(
         `Available profiles: ${profileNames.join(', ')}`,
       );
     }
-    return parsed.profiles[parsed.defaultProfile];
+    return parsed.profiles[parsed.defaultProfile]!;
   }
 
   if (profileNames.length === 1) {
-    return parsed.profiles[profileNames[0]];
+    return parsed.profiles[profileNames[0]!]!;
   }
 
   throw new Error(
