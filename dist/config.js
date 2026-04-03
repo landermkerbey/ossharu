@@ -49,6 +49,13 @@ function readConfigFile(filePath) {
     const raw = fs.readFileSync(filePath, 'utf-8');
     return JSON.parse(raw);
 }
+function readRawConfigFile(filePath) {
+    const raw = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(raw);
+}
+function isProfiledConfig(raw) {
+    return typeof raw === 'object' && raw !== null && 'profiles' in raw;
+}
 const REQUIRED_FIELDS = ['apiKey', 'region', 'voice', 'outputDir'];
 function validateConfig(config) {
     for (const field of REQUIRED_FIELDS) {
@@ -76,10 +83,54 @@ function findConfigInAncestors(dir) {
         current = parent;
     }
 }
+function resolveFromXdgConfig(parsed, profileName, xdgConfigPath) {
+    if (!isProfiledConfig(parsed)) {
+        if (profileName !== undefined) {
+            throw new Error(`--profile was specified but the XDG config at ${xdgConfigPath} uses the ` +
+                `legacy single-config format. Migrate it to the profiles format to use --profile.`);
+        }
+        return parsed;
+    }
+    const profileNames = Object.keys(parsed.profiles);
+    if (profileName !== undefined) {
+        if (!(profileName in parsed.profiles)) {
+            throw new Error(`Profile "${profileName}" not found in ${xdgConfigPath}. ` +
+                `Available profiles: ${profileNames.join(', ')}`);
+        }
+        return parsed.profiles[profileName];
+    }
+    // No --profile given; figure out which profile to use automatically.
+    //
+    // Check defaultProfile first: if the user explicitly set it, always honour
+    // and validate it — even when there happens to be only one profile.
+    if (parsed.defaultProfile !== undefined) {
+        if (!(parsed.defaultProfile in parsed.profiles)) {
+            throw new Error(`defaultProfile "${parsed.defaultProfile}" in ${xdgConfigPath} does not match any profile. ` +
+                `Available profiles: ${profileNames.join(', ')}`);
+        }
+        return parsed.profiles[parsed.defaultProfile];
+    }
+    if (profileNames.length === 1) {
+        return parsed.profiles[profileNames[0]];
+    }
+    throw new Error(`Multiple profiles found in ${xdgConfigPath} but no --profile was specified ` +
+        `and no defaultProfile is set. ` +
+        `Available profiles: ${profileNames.join(', ')}. ` +
+        `Pass --profile <name> or add a "defaultProfile" field to your config.`);
+}
 function loadConfig(options = {}) {
     let base = null;
     if (options.configFile) {
         base = readConfigFile(options.configFile);
+    }
+    else if (options.profile !== undefined) {
+        // --profile: skip local ancestor walk entirely, go straight to XDG config.
+        const xdgConfig = path.join(getXdgConfigDir(), XDG_CONFIG_FILENAME);
+        if (!fs.existsSync(xdgConfig)) {
+            throw new Error(`--profile requires the XDG config file to exist at:\n  ${xdgConfig}`);
+        }
+        const parsed = readRawConfigFile(xdgConfig);
+        base = resolveFromXdgConfig(parsed, options.profile, xdgConfig);
     }
     else {
         const cwdConfig = findConfigInAncestors(process.cwd());
@@ -89,7 +140,8 @@ function loadConfig(options = {}) {
         else {
             const xdgConfig = path.join(getXdgConfigDir(), XDG_CONFIG_FILENAME);
             if (fs.existsSync(xdgConfig)) {
-                base = readConfigFile(xdgConfig);
+                const parsed = readRawConfigFile(xdgConfig);
+                base = resolveFromXdgConfig(parsed, undefined, xdgConfig);
             }
         }
     }

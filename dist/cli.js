@@ -73,10 +73,15 @@ async function runInteractive(config, synthesizer, onOutput, onPrompt) {
 async function runCli(options) {
     const { argv, synthesizer, onOutput, onPrompt = defaultPrompt } = options;
     const program = new commander_1.Command();
+    // Throw CommanderError instead of calling process.exit(), so callers (tests
+    // and index.ts) can handle errors programmatically.
+    program.exitOverride();
     program
         .name('ossharu')
         .description('Generate language-study audio segments via Azure TTS')
         .option('--config <path>', 'path to config file')
+        .addOption(new commander_1.Option('--profile <name>', 'named profile from XDG config (mutually exclusive with --config)')
+        .conflicts('config'))
         .option('--voice <voice>', 'voice name')
         .option('--speed <number>', 'speech speed', parseFloat)
         .option('--output-dir <path>', 'output directory')
@@ -90,6 +95,7 @@ async function runCli(options) {
         .action(async (text, opts) => {
         const config = (0, config_1.loadConfig)({
             configFile: opts.config,
+            profile: opts.profile,
             overrides: {
                 ...(opts.voice && { voice: opts.voice }),
                 ...(opts.speed && { speed: opts.speed }),
