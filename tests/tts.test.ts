@@ -95,6 +95,30 @@ describe('synthesizeSpeech', () => {
     expect(secondPath).toBe(firstPath);              // same path returned
   });
 
+  it('does not use a cached file whose slug is a prefix of a longer phrase', async () => {
+    // Simulate a pre-existing sentence audio file whose filename slug starts
+    // with the target word (e.g. a sentence beginning with 「市場」 cached
+    // before the standalone word was studied).
+    const sentenceSlug = '市場の動向が不安定なので、しばらく様子見'; // 18 chars — starts with 市場
+    const sentenceFile = `${sentenceSlug}-1700000000000.mp3`;
+    fs.writeFileSync(path.join(tmpDir, sentenceFile), Buffer.from('sentence-audio'));
+
+    const mockSynthesize = jest.fn().mockResolvedValue(Buffer.from('word-audio'));
+
+    const outputPath = await synthesizeSpeech({
+      text: '市場',
+      voice: 'ja-JP-NanamiNeural',
+      speed: 1.0,
+      outputDir: tmpDir,
+      synthesizer: mockSynthesize,
+    });
+
+    // Must have synthesized fresh audio, not returned the sentence file
+    expect(mockSynthesize).toHaveBeenCalledTimes(1);
+    expect(path.basename(outputPath)).not.toBe(sentenceFile);
+    expect(fs.readFileSync(outputPath)).toEqual(Buffer.from('word-audio'));
+  });
+
   it('re-synthesizes and overwrites an existing file when force is true', async () => {
     const mockSynthesize = jest.fn()
       .mockResolvedValueOnce(Buffer.from('original-audio'))

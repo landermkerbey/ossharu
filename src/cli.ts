@@ -1,4 +1,4 @@
-import { Command, Option } from 'commander';
+import { Command, Option, OptionValues } from 'commander';
 import { loadConfig } from './config';
 import { synthesizeSpeech, SynthesizerFn } from './tts';
 import * as fs from 'fs';
@@ -92,7 +92,7 @@ export async function runCli(options: RunCliOptions): Promise<void> {
     .option('--force', 'overwrite existing files instead of skipping them')
     .option('--json', 'emit machine-readable JSON objects instead of human-readable lines')
     .argument('[text]', 'text to synthesize')
-    .action(async (text: string | undefined, opts) => {
+    .action(async (text: string | undefined, opts: OptionValues) => {
       const config = loadConfig({
         configFile: opts.config,
         profile: opts.profile,

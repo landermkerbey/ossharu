@@ -15,7 +15,7 @@ export function createAzureSynthesizer(region: string, apiKey: string): Synthesi
 
       synthesizer.speakSsmlAsync(
         ssml,
-        (result) => {
+        (result: sdk.SpeechSynthesisResult) => {
           synthesizer.close();
           if (result.reason === sdk.ResultReason.SynthesizingAudioCompleted) {
             resolve(Buffer.from(result.audioData));
@@ -26,7 +26,7 @@ export function createAzureSynthesizer(region: string, apiKey: string): Synthesi
             ));
           }
         },
-        (error) => {
+        (error: string) => {
           synthesizer.close();
           reject(new Error(`Synthesis error: ${error}`));
         }

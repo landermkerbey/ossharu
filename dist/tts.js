@@ -41,7 +41,7 @@ async function synthesizeSpeech(options) {
     const { text, voice, speed, outputDir, synthesizer, force } = options;
     const slug = text.slice(0, MAX_TEXT_IN_FILENAME).replace(/[/\\?%*:|"<>]/g, '-');
     const existingFile = fs.readdirSync(outputDir)
-        .find(f => f.startsWith(slug) && f.endsWith('.mp3'));
+        .find(f => (f === `${slug}.mp3` || f.startsWith(`${slug}-`)) && f.endsWith('.mp3'));
     if (existingFile && !force) {
         return path.join(outputDir, existingFile);
     }
